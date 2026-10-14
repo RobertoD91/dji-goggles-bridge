@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>DJI Goggles WebUSB</title>
+    <meta
+      name="description"
+      content="Watch DJI FPV Goggles V2 live video in your browser over WebUSB. No installation, no server."
+    />
+    <meta name="theme-color" content="#0d1117" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header class="bar">
+      <h1>DJI Goggles <span>WebUSB</span></h1>
+      <div class="bar-actions">
+        <button id="install" class="ghost" hidden>Install app</button>
+        <a class="ghost button" href="#help">Help</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="stage" id="stage">
+        <canvas id="video" aria-label="Live goggles video"></canvas>
+        <div class="placeholder" id="placeholder">
+          <p id="placeholder-text">Connect DJI FPV Goggles V2 with a USB data cable.</p>
+        </div>
+      </section>
+
+      <section class="controls">
+        <button id="connect" class="primary">Connect goggles</button>
+        <button id="disconnect" hidden>Disconnect</button>
+        <button id="fullscreen" disabled>Fullscreen</button>
+        <button id="record" disabled>Record</button>
+        <label class="toggle" title="Start automatically when previously allowed goggles are plugged in">
+          <input type="checkbox" id="auto-connect" checked /> Auto-connect
+        </label>
+      </section>
+
+      <section class="panel" aria-live="polite">
+        <dl class="checks">
+          <div>
+            <dt>USB</dt>
+            <dd id="check-usb">-</dd>
+          </div>
+          <div>
+            <dt>Goggles</dt>
+            <dd id="check-goggles">-</dd>
+          </div>
+          <div>
+            <dt>Live view</dt>
+            <dd id="check-live">-</dd>
+          </div>
+        </dl>
+        <p class="progress" id="progress">Not connected.</p>
+        <p class="stats" id="stats"></p>
+        <div class="message error" id="error" hidden>
+          <strong id="error-message"></strong>
+          <p id="error-hint"></p>
+        </div>
+        <ul class="notes" id="notes"></ul>
+      </section>
+
+      <div class="message error" id="unsupported" hidden></div>
+
+      <section class="help" id="help">
+        <h2>Help</h2>
+
+        <details open>
+          <summary>Prepare DJI FPV Goggles V2</summary>
+          <ol>
+            <li>
+              Power on the goggles, link the air unit (DJI Air Unit, Caddx Vista or O3) and confirm a live
+              camera picture in the goggles.
+            </li>
+            <li>Select the goggles mode matching your air unit.</li>
+            <li>
+              Connect the goggles' USB-C port to this device with a USB <strong>data</strong> cable. Close
+              other goggles apps, including the desktop DJI Goggles Bridge.
+            </li>
+            <li>Click <strong>Connect goggles</strong> and choose the DJI device.</li>
+          </ol>
+          <p>
+            The picture includes any menus or OSD shown by the goggles. There is no audio. If the goggles send
+            no keyframes, the view starts grey and fills in within a second or two as the stream refreshes.
+          </p>
+        </details>
+
+        <details>
+          <summary>Windows: install WinUSB with Zadig (once)</summary>
+          <ol>
+            <li>Download <a href="https://zadig.akeo.ie/" rel="noopener">Zadig</a> and run it.</li>
+            <li>Enable <strong>Options &gt; List All Devices</strong>.</li>
+            <li>
+              Select <strong>Vision / Bulk Interface (Interface 3 / MI_03)</strong>, USB ID
+              <code>2CA3 001F</code>. Verify that exact interface.
+            </li>
+            <li>
+              Install or replace its driver with <strong>WinUSB</strong>. Leave the other interfaces alone.
+            </li>
+          </ol>
+          <p>The desktop bridge app uses the same WinUSB setup, so both keep working.</p>
+        </details>
+
+        <details>
+          <summary>Linux: allow USB access</summary>
+          <p>Create <code>/etc/udev/rules.d/70-dji-goggles.rules</code> with:</p>
+          <pre><code>SUBSYSTEM=="usb", ATTR{idVendor}=="2ca3", ATTR{idProduct}=="001f", MODE="0660", TAG+="uaccess"</code></pre>
+          <p>Then run <code>sudo udevadm control --reload-rules</code> and replug the goggles.</p>
+        </details>
+
+        <details>
+          <summary>macOS and Android</summary>
+          <p>
+            macOS needs no driver setup. On Android, use Chrome and a USB-C data cable or OTG adapter; the
+            phone must act as the USB host. Android and other V2 pairings have not been verified on hardware
+            yet.
+          </p>
+        </details>
+
+        <details>
+          <summary>DJI Goggles 3, Goggles 2 and other headsets</summary>
+          <p>
+            <strong>DJI Goggles 3</strong> send video through a USB network (RNDIS) interface. Browsers
+            deliberately block that interface class for WebUSB, so Goggles 3 only work with the
+            <a href="https://github.com/RobertoD91/dji-goggles-bridge#readme"
+              >desktop DJI Goggles Bridge app</a
+            >. DJI Goggles 2, analog AV-IN, the DJI FPV drone and Avata are not supported here.
+          </p>
+        </details>
+
+        <details>
+          <summary>Browsers, recording and OBS</summary>
+          <p>
+            WebUSB and WebCodecs need <strong>Chrome</strong>, <strong>Edge</strong> or another Chromium
+            browser on desktop or Android. Firefox and Safari do not support WebUSB.
+          </p>
+          <p>
+            <strong>Record</strong> saves an H.264 (<code>.h264</code>) file that VLC, ffplay and ffmpeg can
+            open. To make an MP4: <code>ffmpeg -framerate 60 -i input.h264 -c copy output.mp4</code> (use your
+            goggles' frame rate).
+          </p>
+          <p>
+            For OBS, add a <strong>Window Capture</strong> of this window, then use fullscreen or install the
+            app to remove browser controls.
+          </p>
+          <p>Everything runs locally in your browser: video never leaves this device.</p>
+        </details>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Part of <a href="https://github.com/RobertoD91/dji-goggles-bridge">DJI Goggles Bridge</a>, based on
+        <a href="https://github.com/Evols/dji-goggles-bridge"
+          >DJI Goggles Bridge by Baptiste Hutteau and contributors</a
+        >, licensed <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Independent project,
+        not affiliated with DJI.
+      </p>
+    </footer>
+  </body>
+</html>

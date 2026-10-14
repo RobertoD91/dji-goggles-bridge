@@ -11,6 +11,18 @@ No proprietary app, firmware, or license keys.
 Independent project, not affiliated with DJI. If you build something with it,
 you're encouraged to keep it free and share it with the community.
 
+## Watch in your browser (FPV Goggles V2)
+
+**[Open the WebUSB live viewer](https://robertod91.github.io/dji-goggles-bridge/)** in Chrome
+or Edge, on a computer or an Android phone. It shows **DJI FPV Goggles V2** live video without
+installing anything, works offline once loaded, and can be installed as an app. Video stays on
+your device. Prepare the goggles as described for V2 below (WinUSB on Windows, a udev rule on
+Linux), click **Connect goggles** and choose the DJI device. **Record** saves an `.h264` file.
+
+**DJI Goggles 3 can't be used from a browser**: they send video through a USB network (RNDIS)
+interface, and browsers block that interface class for WebUSB. Use the downloadable app below.
+The web app's source is in [webusb/](webusb).
+
 ## Download and open
 
 Get the archive for your computer from **[GitHub Releases](https://github.com/Evols/dji-goggles-bridge/releases)**,
@@ -307,6 +319,13 @@ ruff check .
 ruff format --check .
 python -m build
 ```
+
+The web app in `webusb/` is plain JavaScript modules with no build step or dependencies.
+Run its tests with Node.js 22 from `webusb/`: `node --test`. The end-to-end test drives the
+real page in Google Chrome with a simulated headset:
+`npm install --no-save playwright-core` then `CHROME_PATH=/path/to/chrome node tests/e2e/live-view.e2e.mjs`.
+Serve `webusb/` over `http://localhost` (for example `python -m http.server -d webusb`) to try it.
+Pushing to `main` publishes it with GitHub Pages (Settings > Pages > Source: GitHub Actions).
 
 Build **Windows on Windows** with `scripts\build_windows.cmd`.
 Build **macOS on macOS** with `brew install libusb`, then `sh scripts/build_macos.sh`.
