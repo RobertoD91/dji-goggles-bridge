@@ -29,6 +29,23 @@ jobs:
         run: powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_network_setup.ps1
       - run: python -m build
 
+  webusb:
+    name: WebUSB web app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webusb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test
+      - name: End-to-end test in Google Chrome with a simulated headset
+        run: |
+          npm install --no-save --no-package-lock playwright-core@1.56.1
+          CHROME_PATH="$(command -v google-chrome)" node tests/e2e/live-view.e2e.mjs
+
   build-artifacts:
     name: Build application artifacts
     needs: test

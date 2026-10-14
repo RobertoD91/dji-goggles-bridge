@@ -89,3 +89,37 @@ or `goggles_v2.py`. Highlights backed by hardware debugging:
 `tests/helpers.py` builds wire packets independently of the production builders on purpose;
 do not replace it with calls into `goggles_3`. USB is faked with `SimpleNamespace`-based peers
 (see `tests/test_goggles_v2.py`, `tests/test_rndis.py`).
+
+## WebUSB web app (`webusb/`)
+
+A PWA published to GitHub Pages (`.github/workflows/pages.yml`, on pushes to `main`) that
+shows **FPV Goggles V2** video in Chrome/Edge (desktop and Android). Plain ES modules, no
+build step, no runtime dependencies; all paths are relative because Pages serves it under
+`/dji-goggles-bridge/`. Goggles 3 cannot work there: their RNDIS control interface is class
+`0xE0`, which WebUSB refuses to claim, so the app only explains this.
+
+```sh
+cd webusb && node --test                       # unit tests (tests/*.test.mjs, Node 22)
+cd webusb && node --test tests/stream.test.mjs # one file
+npm install --no-save playwright-core && CHROME_PATH=/path/to/google-chrome node tests/e2e/live-view.e2e.mjs
+python webusb/tests/fixtures/generate.py       # regenerate H.264 fixtures (PyAV + libx264)
+cd webusb && npx prettier --check .            # formatting (.prettierrc.json, width 110)
+```
+
+The e2e test needs Google Chrome (Playwright's Chromium lacks H.264) and fakes
+`navigator.usb`. `tests/test_webusb_stream.py` (Python suite) runs
+`webusb/tests/tools/decoder-input.mjs` through Node and decodes its output with FFmpeg.
+
+Pipeline: `usb.js` (same protocol as `goggles_v2.py`; WebUSB has no transfer timeouts, so the
+`RMVT` timeout is a timer race and four `transferIn` calls stay queued) -> `stream.js`
+(`AnnexBSplitter`, access-unit grouping, SPS/PPS tracking, emits `configure`/`chunk` actions)
+-> `player.js` (WebCodecs `VideoDecoder`, falls back to `prefer-software` on errors, draws only
+the newest frame) orchestrated by `session.js`. `recorder.js` feeds a second `VideoStream`
+so recordings start at a key picture.
+
+The key piece is `bootstrap.js`: Chrome refuses a `key` chunk without an IDR slice and there
+is no SHOW_ALL, so a stream without IDRs starts from synthetic grey pictures (CAVLC PPS with an
+unused ID, I_16x16 IDR, P_Skip fillers for every reference frame), and later slices get their
+fixed-width `frame_num`/`pic_order_cnt_lsb` rewritten to continue without a gap (see
+PROTOCOL.md, "H.264 decoding"). Keep `stream.js`/`bootstrap.js` free of browser APIs so they
+stay testable in Node.

@@ -12,3 +12,8 @@ dist/
 *.log
 
 .idea/
+
+# WebUSB app: test fixtures are small H.264 files; npm installs only test tools.
+!webusb/tests/fixtures/*.h264
+webusb/node_modules/
+webusb/package-lock.json

@@ -224,6 +224,16 @@ FFmpeg otherwise withheld all decoded frames while waiting for a keyframe.
 Set [AV_CODEC_FLAG2_SHOW_ALL](https://ffmpeg.org/doxygen/trunk/group__lavc__core.html)
 (bit 22 of flags2) to allow output before that first keyframe.
 
+Browsers' WebCodecs `VideoDecoder` has no SHOW_ALL equivalent, and Chrome rejects a `key`
+chunk that contains no IDR slice. The WebUSB app (`webusb/src/bootstrap.js`) therefore starts
+such a stream with synthetic pictures built from the stream's own SPS: a CAVLC PPS with an
+unused ID, a mid-grey IDR (every macroblock I_16x16 DC prediction without residual), and
+P_Skip copies until `max_num_ref_frames` are in use. It then rewrites `frame_num` and
+`pic_order_cnt_lsb` of the following slices (fixed-width fields) to continue without a gap.
+With P-only x264 intra-refresh streams joined mid-stream, FFmpeg without SHOW_ALL decodes this
+output to the same pictures as SHOW_ALL decodes the original, and Chrome decodes it too. This
+has not yet been verified with DJI hardware.
+
 Parsing and decoding are separate operations. PyAV's
 [CodecContext.parse](https://pyav.org/docs/stable/api/codec.html) buffers partial
 access units; decode() turns parsed packets into pictures. Skip damaged initial
